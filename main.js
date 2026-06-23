@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, shell, nativeImage, globalShortcut, ipcMain, screen, dialog } from 'electron';
 import path from 'path';
-import { autoUpdater } from 'electron-updater';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
