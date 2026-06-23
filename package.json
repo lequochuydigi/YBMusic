@@ -28,8 +28,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "huyleequoc",
-        "repo": "yt-music-bg"
+        "owner": "lequochuydigi",
+        "repo": "YBMusic"
       }
     ]
   },
