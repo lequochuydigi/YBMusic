@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Player</title>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link rel="stylesheet" href="mini.css">
+</head>
+<body>
+  <div class="mini-container">
+    <div class="drag-region"></div>
+    <div class="content">
+      <img id="artwork" src="" alt="Artwork">
+      <div class="info">
+        <div id="title" class="truncate">Không có bài hát</div>
+        <div id="author" class="truncate">...</div>
+      </div>
+      <div class="controls">
+        <button id="prevBtn" title="Bài trước"><i class="ph-fill ph-skip-back"></i></button>
+        <button id="playPauseBtn" class="play-btn" title="Phát/Tạm dừng"><i class="ph-fill ph-play"></i></button>
+        <button id="nextBtn" title="Bài tiếp"><i class="ph-fill ph-skip-forward"></i></button>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div id="progressFill" class="progress-fill"></div>
+    </div>
+  </div>
+  <script src="mini.js"></script>
+</body>
+</html>

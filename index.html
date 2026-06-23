@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>YB Music</title>
+  <meta name="description" content="Nghe nhạc YouTube không quảng cáo, chạy ngầm trên mọi thiết bị." />
+  <!-- Google Fonts: load non-blocking -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet"></noscript>
+  <!-- Phosphor Icons: async non-blocking -->
+  <script src="https://unpkg.com/@phosphor-icons/web" async></script>
+  <link rel="stylesheet" href="./style.css?v=1.6.5">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- ================= SPLASH SCREEN ================= -->
+  <div id="splashScreen" class="splash-screen">
+    <div class="loader"></div>
+    <h2>Đang kết nối...</h2>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- ================= SIDEBAR (Player) ================= -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-header desktop-only">
+        <h1>YB Music</h1>
+      </div>
+
+      <div class="mobile-nav mobile-only">
+        <button id="mobileClosePlayerBtn" class="nav-btn icon-only"><i class="ph ph-caret-down"></i></button>
+        <span style="font-weight: 600; font-size: 14px;">Đang phát</span>
+        <button class="nav-btn icon-only" style="opacity:0"><i class="ph ph-caret-down"></i></button>
+      </div>
+
+      <main class="player-main">
+        <div class="artwork-container" id="artworkContainer">
+          <div class="artwork-wrapper">
+            <img id="artwork" src="" alt="Artwork" />
+            <iframe id="videoEmbed" style="display:none;" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          </div>
+          <button id="videoToggleBtn" class="video-toggle-btn" title="Xem video">
+            <i class="ph ph-monitor-play"></i> Video
+          </button>
+        </div>
+        <div class="track-info">
+          <h2 id="trackTitle">Đang kết nối hệ thống...</h2>
+          <p id="trackAuthor">Vui lòng chờ</p>
+        </div>
+      </main>
+
+      <div class="player-controls">
+        <div class="progress-container">
+          <span id="currentTime">0:00</span>
+          <div class="progress-bar-bg" id="progressBarBg">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+          <span id="durationTime">0:00</span>
+        </div>
+        <div class="control-buttons">
+          <button class="control-btn" id="playModeBtn" title="Lần lượt"><i class="ph ph-arrows-left-right"></i></button>
+          <button class="control-btn" id="prevBtn"><i class="ph-fill ph-skip-back"></i></button>
+          <button class="control-btn play-btn" id="playPauseBtn"><i class="ph-fill ph-play"></i></button>
+          <button class="control-btn" id="nextBtn"><i class="ph-fill ph-skip-forward"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT (Views) ================= -->
+    <main class="app-main" id="appMain">
+      
+      <!-- TOP NAVIGATION -->
+      <div class="top-nav">
+        <div class="nav-left">
+          <button id="navPlaylistBtn" class="nav-btn active-tab"><i class="ph ph-list-dashes"></i> Danh Sách</button>
+          <button id="navDiscoverBtn" class="nav-btn"><i class="ph ph-compass"></i> Khám Phá</button>
+        </div>
+        <div class="nav-right">
+          <button id="qrBtn" class="nav-btn icon-only" title="Mã kết nối"><i class="ph ph-qr-code"></i></button>
+          <button id="settingsBtn" class="nav-btn icon-only desktop-only" title="Cài đặt"><i class="ph ph-gear"></i></button>
+        </div>
+      </div>
+
+      <!-- VIEW 1: PLAYLIST & SEARCH -->
+      <div id="viewPlaylist" class="view-section active">
+        <header class="header">
+          <h2>YB Music</h2>
+          <div class="input-group">
+            <input type="text" id="urlInput" placeholder="Nhập tên bài hát hoặc Link YouTube..." />
+            <button id="loadBtn"><i class="ph ph-magnifying-glass"></i></button>
+          </div>
+        </header>
+
+        <div class="playlist-section">
+          <div class="playlist-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 id="currentPlaylistName" style="cursor: pointer; color: var(--accent-color); display:flex; align-items:center; gap:4px;">
+                Mặc định <i class="ph ph-caret-down"></i>
+              </h3>
+              <span id="songCount">0 bài</span>
+            </div>
+            <div class="playlist-actions" style="display: flex; gap: 10px;">
+              <button class="primary-btn" id="playAllBtn" style="flex: 1; padding: 8px;"><i class="ph-fill ph-play"></i> Phát tất cả</button>
+              <button class="nav-btn" id="shufflePlayBtn" style="flex: 1; padding: 8px;"><i class="ph ph-shuffle"></i> Phát ngẫu nhiên</button>
+            </div>
+          </div>
+          <div class="playlist-list" id="playlistList">
+            <!-- Playlist items injected here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: DISCOVER -->
+      <div id="viewDiscover" class="view-section">
+        <h2>Bảng Xếp Hạng & Khám Phá</h2>
+        <p class="section-desc">Nghe thử hoặc thêm các bộ sưu tập vào thư viện của bạn.</p>
+        <div class="discover-grid" id="discoverGrid">
+          <p style="text-align:center;width:100%;padding:20px;">Đang tải...</p>
+        </div>
+      </div>
+
+      <!-- VIEW 3: ALBUM DETAIL -->
+      <div id="viewAlbum" class="view-section">
+        <div class="album-header-actions">
+          <button class="nav-btn" id="backToDiscoverBtn"><i class="ph ph-arrow-left"></i> Quay lại</button>
+          <button class="primary-btn" id="playAlbumBtn" style="width:auto; padding: 8px 16px;"><i class="ph-fill ph-play"></i> Phát toàn bộ</button>
+        </div>
+        <h2 id="albumDetailName" style="margin-top: 15px;">Tên Album</h2>
+        <p class="section-desc" id="albumDetailCount">0 bài hát</p>
+        <div class="playlist-list mt-10" id="albumTrackList"></div>
+      </div>
+
+      <!-- VIEW 4: ARTIST PAGE -->
+      <div id="viewArtist" class="view-section">
+        <button class="nav-btn" id="backFromArtistBtn"><i class="ph ph-arrow-left"></i> Quay lại</button>
+        <!-- Skeleton -->
+        <div id="artistSkeleton" style="display:none; margin-top:20px;">
+          <div class="skeleton-header">
+            <div class="skeleton-avatar"></div>
+            <div>
+              <div class="skeleton-line wide"></div>
+              <div class="skeleton-line medium"></div>
+            </div>
+          </div>
+          <div class="skeleton-grid">
+            <div class="skeleton-card" style="--n:1"></div>
+            <div class="skeleton-card" style="--n:2"></div>
+            <div class="skeleton-card" style="--n:3"></div>
+            <div class="skeleton-card" style="--n:4"></div>
+            <div class="skeleton-card" style="--n:5"></div>
+            <div class="skeleton-card" style="--n:6"></div>
+          </div>
+        </div>
+        <!-- Content -->
+        <div id="artistContent" style="display:none;">
+          <div class="artist-header">
+            <img id="artistThumb" src="" alt="" class="artist-avatar">
+            <div>
+              <h2 id="artistName">Tên nghệ sĩ</h2>
+              <p class="section-desc" id="artistSongCount">0 bài hát</p>
+            </div>
+          </div>
+          <div class="playlist-list mt-10" id="artistSongList"></div>
+          <button id="loadMoreArtistBtn" class="load-more-btn" style="display:none;">
+            <i class="ph ph-arrow-down"></i> Xem thêm 50 bài
+          </button>
+        </div>
+      </div>
+
+      <!-- BOTTOM PADDING SO MINI PLAYER DOESNT COVER LAST ITEM -->
+      <div style="height: 80px;" class="mobile-only"></div>
+    </main>
+
+  </div>
+
+  <!-- ================= MOBILE MINI PLAYER ================= -->
+  <div class="mini-player" id="miniPlayer">
+    <div class="mini-info" id="miniPlayerInfo">
+      <img id="miniArtwork" src="" alt="">
+      <div class="mini-text">
+        <div class="mini-title" id="miniTitle">Chưa có bài hát</div>
+        <div class="mini-author" id="miniAuthor">...</div>
+      </div>
+    </div>
+    <div class="mini-controls">
+      <button class="control-btn" id="miniPlayPauseBtn" style="font-size: 24px;"><i class="ph-fill ph-play"></i></button>
+    </div>
+    <div class="mini-progress" id="miniProgress"></div>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- QR Code Modal -->
+  <div id="qrModal" class="modal">
+    <div class="modal-content text-center">
+      <span class="close-btn" onclick="document.getElementById('qrModal').style.display='none'">&times;</span>
+      <h3>Kết nối Điện thoại</h3>
+      <p class="modal-desc">Dùng camera quét mã để nghe nhạc trên điện thoại</p>
+      <div id="qrcode" class="qr-container"></div>
+      <p id="ipAddressText" class="ip-text"></p>
+      <button id="createTunnelBtn" class="primary-btn mt-10" style="width:100%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i class="ph ph-globe-hemisphere-west"></i> Phát qua Internet (Khác WiFi / Dùng 4G)
+      </button>
+      <div id="tunnelLinkContainer" style="display:none; margin-top:10px;">
+        <input type="text" id="tunnelLinkInput" readonly style="width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; text-align:center;" />
+        <p style="font-size:12px; color:var(--text-secondary); margin-top:5px;">Gửi link này qua Zalo cho điện thoại, hoặc quét mã QR mới ở trên.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playlists Manager Modal -->
+  <div id="playlistsModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="document.getElementById('playlistsModal').style.display='none'">&times;</span>
+      <h3>Quản lý Danh sách</h3>
+      <div class="playlists-list" id="playlistsListUI"></div>
+      <button id="createNewPlaylistBtn" class="primary-btn mt-10"><i class="ph ph-plus"></i> Tạo danh sách mới</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="document.getElementById('settingsModal').style.display='none'">&times;</span>
+      <h3>Cài đặt</h3>
+      <div class="setting-item">
+        <span>Tự động chuyển khi lỗi (AI)</span>
+        <label class="switch">
+          <input type="checkbox" id="autoSkipToggle">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <p class="setting-desc">Khi bài hát bị YouTube chặn, tự động xoá và phát bài kế tiếp.</p>
+
+      <div id="desktopSettings" style="display: none;">
+        <div class="settings-divider"></div>
+        <div class="setting-item">
+          <span>Khởi động cùng Windows</span>
+          <label class="switch">
+            <input type="checkbox" id="autoStartToggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <p class="setting-desc">Phần mềm sẽ tự mở khi bạn bật máy tính.</p>
+
+        <div class="setting-item">
+          <span>Cho phép Điện thoại sửa danh sách</span>
+          <label class="switch">
+            <input type="checkbox" id="allowPhoneEditToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <p class="setting-desc">Khi bật, điện thoại có thể thêm/xóa bài hát trong danh sách của máy tính. Khi tắt, điện thoại chỉ sửa được danh sách phiên riêng của họ.</p>
+
+        <button id="quitAppBtn" class="danger-btn mt-10"><i class="ph ph-power"></i> Tắt hoàn toàn phần mềm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Results Modal -->
+  <div id="searchModal" class="modal">
+    <div class="modal-content modal-wide">
+      <span class="close-btn" onclick="document.getElementById('searchModal').style.display='none'">&times;</span>
+      <h3 id="searchModalTitle">Kết quả tìm kiếm</h3>
+      <div class="search-results-list" id="searchResultsList"></div>
+      <button id="loadMoreSearchBtn" class="load-more-btn" style="display:none; margin-top:10px;">
+        <i class="ph ph-arrow-down"></i> Tải thêm 20 bài
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom Input Modal (thay prompt) -->
+  <div id="inputModal" class="modal">
+    <div class="modal-content modal-narrow">
+      <span class="close-btn" onclick="document.getElementById('inputModal').style.display='none'">&times;</span>
+      <h3 id="inputModalTitle">Nhập tên</h3>
+      <div class="input-modal-body">
+        <input type="text" id="inputModalField" placeholder="" class="modal-input" />
+        <button id="inputModalConfirm" class="primary-btn mt-10">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Playlist Popup -->
+  <div id="addToPlaylistModal" class="modal">
+    <div class="modal-content modal-narrow">
+      <span class="close-btn" onclick="document.getElementById('addToPlaylistModal').style.display='none'">&times;</span>
+      <h3>Thêm vào danh sách</h3>
+      <div class="add-to-playlist-list" id="addToPlaylistList">
+        <!-- Playlist options injected here -->
+      </div>
+    </div>
+  </div>
+
+  <audio id="audioPlayer" playsinline></audio>
+  <script src="app.js?v=1.6.5"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW ref failed', e));
+      });
+    }
+  </script>
+</body>
+</html>

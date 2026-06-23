@@ -1,0 +1,175 @@
+import { app, BrowserWindow, Tray, Menu, shell, nativeImage, globalShortcut, ipcMain, screen, dialog } from 'electron';
+import path from 'path';
+import { autoUpdater } from 'electron-updater';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Start the Express server
+import { setElectronApp, startServer } from './server.js';
+setElectronApp(app);
+
+let tray = null;
+let mainWindow = null;
+let miniWindow = null;
+
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  startServer();
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+  });
+
+  app.whenReady().then(() => {
+    // Check for updates
+    autoUpdater.checkForUpdatesAndNotify();
+
+    mainWindow = new BrowserWindow({
+      width: 480,
+      height: 850,
+      autoHideMenuBar: true,
+      webPreferences: { 
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'preload.cjs'),
+        backgroundThrottling: false // Keep running in background
+      }
+    });
+
+    // Create Mini Window
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    miniWindow = new BrowserWindow({
+      width: 320,
+      height: 120,
+      x: width - 330,
+      y: height - 130,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      show: false,
+      resizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, 'mini-preload.cjs')
+      }
+    });
+    
+    // IPC Routing
+    ipcMain.on('player-state-update', (event, state) => {
+      if (miniWindow && !miniWindow.isDestroyed()) {
+        miniWindow.webContents.send('player-state-update', state);
+      }
+    });
+
+    ipcMain.on('player-command', (event, command) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('player-command', command);
+      }
+    });
+
+    // Register Global Media Keys (Keyboard & Stream Deck)
+    globalShortcut.register('MediaPlayPause', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript('if (typeof togglePlay === "function") togglePlay();');
+      }
+    });
+
+    globalShortcut.register('MediaNextTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript('if (typeof playNext === "function") playNext();');
+      }
+    });
+
+    globalShortcut.register('MediaPreviousTrack', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript('if (typeof playPrev === "function") playPrev();');
+      }
+    });
+
+    mainWindow.webContents.session.clearCache().then(() => {
+      return mainWindow.webContents.session.clearStorageData({ storages: ['serviceworkers', 'caches'] });
+    }).then(() => {
+      // The Express server runs on 5173
+      mainWindow.loadURL('http://localhost:5173');
+      miniWindow.loadURL('http://localhost:5173/mini.html');
+    });
+
+    mainWindow.on('close', (event) => {
+      if (!app.isQuitting) {
+        event.preventDefault();
+        mainWindow.hide();
+      }
+      return false;
+    });
+
+    miniWindow.on('close', (event) => {
+      if (!app.isQuitting) {
+        event.preventDefault();
+        miniWindow.hide();
+      }
+      return false;
+    });
+
+    // Icon cho Khay hệ thống
+    const iconPath = path.join(__dirname, 'assets', 'tray-icon.png');
+    const icon = nativeImage.createFromPath(iconPath);
+    tray = new Tray(icon);
+    tray.setToolTip('YB Music - Youtube Background Music');
+
+    const updateContextMenu = () => {
+      const loginSettings = app.getLoginItemSettings();
+      const contextMenu = Menu.buildFromTemplate([
+        { label: 'Mở cửa sổ nghe nhạc', click: () => mainWindow.show() },
+        { label: 'Nghe trên Trình duyệt Web', click: () => shell.openExternal('http://localhost:5173') },
+        { type: 'separator' },
+        { 
+          label: 'Khởi động cùng Windows', 
+          type: 'checkbox', 
+          checked: loginSettings.openAtLogin,
+          click: (item) => {
+            app.setLoginItemSettings({ openAtLogin: item.checked });
+          }
+        },
+        { type: 'separator' },
+        { label: 'Thoát hoàn toàn', click: () => {
+          app.isQuitting = true;
+          app.quit();
+        }}
+      ]);
+      tray.setContextMenu(contextMenu);
+    };
+
+    updateContextMenu();
+
+    tray.on('click', () => {
+      const isMainVisible = mainWindow.isVisible();
+      const isMiniVisible = miniWindow.isVisible();
+
+      if (!isMainVisible && !isMiniVisible) {
+        // Both hidden -> Show mini
+        miniWindow.show();
+      } else if (isMiniVisible) {
+        // Mini visible -> Hide mini, show main
+        miniWindow.hide();
+        mainWindow.show();
+        mainWindow.focus();
+      } else if (isMainVisible) {
+        // Main visible -> Hide main
+        mainWindow.hide();
+      }
+    });
+  });
+}

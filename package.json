@@ -1,0 +1,52 @@
+{
+  "name": "youtube-bg-player",
+  "private": true,
+  "version": "1.6.5",
+  "description": "YouTube Music Background Player",
+  "author": "Antigravity",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "dev": "node server.js",
+    "build": "electron-builder build --win",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.antigravity.ytmusicbg",
+    "productName": "YB Music",
+    "icon": "assets/icon.png",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "huyleequoc",
+        "repo": "yt-music-bg"
+      }
+    ]
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
+    "auto-launch": "^5.0.6",
+    "cors": "^2.8.5",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.9",
+    "express": "^4.19.2",
+    "localtunnel": "^2.0.2",
+    "play-dl": "^1.9.7"
+  },
+  "devDependencies": {
+    "@phosphor-icons/web": "^2.1.2",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "vite": "^5.0.0"
+  }
+}

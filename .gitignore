@@ -1,0 +1,12 @@
+node_modules/
+.system_generated/
+*.log
+.DS_Store
+dist/
+.env
+
+*.old.*
+*.txt
+test_*.json
+1782*-player-script.js
+scratch/
