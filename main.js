@@ -32,8 +32,15 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
-    // Check for updates
-    autoUpdater.checkForUpdatesAndNotify();
+    // Check for updates with error handling
+    try {
+      autoUpdater.on('error', (err) => {
+        console.log('Update check failed:', err);
+      });
+      autoUpdater.checkForUpdatesAndNotify().catch(err => console.log('AutoUpdater caught error:', err));
+    } catch (e) {
+      console.log('AutoUpdater sync error:', e);
+    }
 
     mainWindow = new BrowserWindow({
       width: 480,
