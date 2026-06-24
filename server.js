@@ -71,7 +71,7 @@ function getAudioUrl(videoId) {
   const promise = new Promise((resolve, reject) => {
     // Thêm --remote-components ejs:github để giải mã n-parameter YouTube (tránh throttle/lỗi)
     const cmdArgs = ['--js-runtimes', 'node', '--remote-components', 'ejs:github', '-g', '-f', 'bestaudio[abr<=128]/bestaudio/best', '--no-playlist', videoId];
-    execFile('yt-dlp', cmdArgs, (error, stdout, stderr) => {
+    execFile('yt-dlp', cmdArgs, { timeout: 30000 }, (error, stdout, stderr) => {
       pendingUrlPromises.delete(videoId);
       if (error) {
         console.error(`yt-dlp error: ${stderr}`);
@@ -102,7 +102,7 @@ app.get('/api/info', (req, res) => {
 
   const cmdArgs = ['--js-runtimes', 'node', '--remote-components', 'ejs:github', '-j', '--no-playlist', videoUrl];
   
-  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 10, timeout: 30000 }, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).json({ error: 'Failed to extract video info', details: stderr });
@@ -285,7 +285,7 @@ app.get('/api/playlist', (req, res) => {
     playlistUrl
   ];
 
-  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20 }, (error, stdout, stderr) => {
+  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20, timeout: 30000 }, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).json({ error: 'Failed to extract playlist info', details: stderr });
@@ -328,7 +328,7 @@ app.get('/api/search', (req, res) => {
   const searchQuery = offset > 0 ? `ytsearch${offset + count}:${query}` : `ytsearch${count}:${query}`;
   const cmdArgs = ['--js-runtimes', 'node', '-J', '--flat-playlist', searchQuery];
   
-  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20 }, (error, stdout, stderr) => {
+  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20, timeout: 30000 }, (error, stdout, stderr) => {
     try {
       const data = JSON.parse(stdout);
       const entries = data.entries || [];
@@ -389,12 +389,12 @@ app.get('/api/artist', (req, res) => {
   
   const cmdArgs = ['--js-runtimes', 'node', '--flat-playlist', '-J', '--playlist-end', '50', channelUrl];
 
-  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20 }, (error, stdout, stderr) => {
+  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20, timeout: 30000 }, (error, stdout, stderr) => {
     if (error) {
       // Fallback: try with ytsearch for the artist name
       const fallbackArgs = ['--js-runtimes', 'node', '-j', '--no-playlist', `ytsearch30:${channelName || channelId}`];
       
-      execFile('yt-dlp', fallbackArgs, { maxBuffer: 1024 * 1024 * 20 }, (err2, stdout2, stderr2) => {
+      execFile('yt-dlp', fallbackArgs, { maxBuffer: 1024 * 1024 * 20, timeout: 30000 }, (err2, stdout2, stderr2) => {
         if (err2) {
           return res.status(500).json({ error: 'Failed to fetch artist', details: stderr2?.substring(0, 200) });
         }
@@ -472,7 +472,7 @@ app.get('/api/artist/more', (req, res) => {
   const cmdArgs = ['--js-runtimes', 'node', '--flat-playlist', '-J',
     '--playlist-start', String(start), '--playlist-end', String(end), channelUrl];
 
-  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20 }, (error, stdout, stderr) => {
+  execFile('yt-dlp', cmdArgs, { maxBuffer: 1024 * 1024 * 20, timeout: 30000 }, (error, stdout, stderr) => {
     if (error) return res.status(500).json({ error: 'Failed to fetch more', details: stderr?.substring(0, 200) });
     try {
       const data = JSON.parse(stdout);

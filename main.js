@@ -32,6 +32,10 @@ if (!gotTheLock) {
     globalShortcut.unregisterAll();
   });
 
+  app.on('before-quit', () => {
+    app.isQuitting = true;
+  });
+
   app.whenReady().then(() => {
     // Check for updates with error handling
     try {
@@ -115,10 +119,21 @@ if (!gotTheLock) {
       miniWindow.loadURL('http://localhost:5173/mini.html');
     });
 
+    // Handle Renderer crashes (Network switch might crash chromium)
+    mainWindow.webContents.on('render-process-gone', (e, details) => {
+      console.error('Renderer process gone:', details.reason);
+      if (details.reason !== 'clean-exit') mainWindow.reload();
+    });
+
+    miniWindow.webContents.on('render-process-gone', (e, details) => {
+      console.error('Mini renderer process gone:', details.reason);
+      if (details.reason !== 'clean-exit') miniWindow.reload();
+    });
+
     mainWindow.on('close', (event) => {
       if (!app.isQuitting) {
         event.preventDefault();
-        mainWindow.hide();
+        if (!mainWindow.isDestroyed()) mainWindow.hide();
       }
       return false;
     });
@@ -126,7 +141,7 @@ if (!gotTheLock) {
     miniWindow.on('close', (event) => {
       if (!app.isQuitting) {
         event.preventDefault();
-        miniWindow.hide();
+        if (!miniWindow.isDestroyed()) miniWindow.hide();
       }
       return false;
     });
@@ -163,6 +178,7 @@ if (!gotTheLock) {
     updateContextMenu();
 
     tray.on('click', () => {
+      if (mainWindow.isDestroyed() || miniWindow.isDestroyed()) return;
       const isMainVisible = mainWindow.isVisible();
       const isMiniVisible = miniWindow.isVisible();
 
