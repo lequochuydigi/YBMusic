@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yt-bg-player-v1.7.1';
+const CACHE_NAME = 'yt-bg-player-v1.7.2';
 const ASSETS_TO_CACHE = [
   '/?v=1.7.1',
   '/index.html?v=1.7.1',

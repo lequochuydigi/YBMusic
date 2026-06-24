@@ -869,8 +869,9 @@ miniPlayPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleP
   function togglePlay() {
     if (!audio.src) { selectSong(currentSongIndex); return; }
     if (audio.paused) {
-      if (pauseTimestamp > 0 && Date.now() - pauseTimestamp > 120000) {
-        console.warn("[Resume] Paused for > 2 mins, auto-recovering stream...");
+      // Bị kẹt mạng hoặc dừng quá 10 giây (do bị gọi điện / Safari block nền)
+      if (audio.readyState < 3 || (pauseTimestamp > 0 && Date.now() - pauseTimestamp > 10000)) {
+        console.warn("[Resume] Audio state < 3 or paused for > 10s, auto-recovering stream...");
         recoverAudioStream();
         pauseTimestamp = 0;
         return;
@@ -944,11 +945,66 @@ if (shufflePlayBtn) {
 }
 prevBtn.addEventListener('click', playPrev);
 
-progressBarBg.addEventListener('click', (e) => {
-  if (!audio.duration) return;
-  const rect = progressBarBg.getBoundingClientRect();
-  audio.currentTime = audio.duration * ((e.clientX - rect.left) / rect.width);
-});
+let isDraggingProgress = false;
+  
+  function handleProgressInteraction(e) {
+    let clientX;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+    } else {
+      clientX = e.clientX;
+    }
+
+    const rect = progressBarBg.getBoundingClientRect();
+    let pct = (clientX - rect.left) / rect.width;
+    pct = Math.max(0, Math.min(1, pct));
+    
+    progressBarFill.style.width = `${pct * 100}%`;
+    miniProgress.style.width = `${pct * 100}%`;
+    
+    const currentSong = getCurrentSongs()[currentSongIndex];
+    let duration = audio.duration;
+    if (!duration || duration === Infinity) {
+      if (currentSong && currentSong.duration) duration = currentSong.duration;
+    }
+    
+    if (duration > 0 && duration !== Infinity) {
+      currentTimeEl.innerText = formatTime(duration * pct);
+      if (e.type === 'mouseup' || e.type === 'touchend' || e.type === 'click') {
+        audio.currentTime = duration * pct;
+      }
+    }
+  }
+
+  progressBarBg.addEventListener('mousedown', (e) => {
+    isDraggingProgress = true;
+    handleProgressInteraction(e);
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (isDraggingProgress) handleProgressInteraction(e);
+  });
+  document.addEventListener('mouseup', (e) => {
+    if (isDraggingProgress) {
+      handleProgressInteraction(e);
+      isDraggingProgress = false;
+    }
+  });
+
+  progressBarBg.addEventListener('touchstart', (e) => {
+    isDraggingProgress = true;
+    handleProgressInteraction(e);
+  }, {passive: true});
+  document.addEventListener('touchmove', (e) => {
+    if (isDraggingProgress) handleProgressInteraction(e);
+  }, {passive: true});
+  document.addEventListener('touchend', (e) => {
+    if (isDraggingProgress) {
+      handleProgressInteraction(e);
+      isDraggingProgress = false;
+    }
+  });
 
 // --- AUDIO EVENTS ---
 audio.addEventListener('play', () => { 
@@ -992,8 +1048,15 @@ function prefetchNextSong() {
 }
 
 audio.addEventListener('timeupdate', () => {
-  const d = audio.duration;
-  if (d > 0) {
+  if (isDraggingProgress) return;
+  
+  const currentSong = getCurrentSongs()[currentSongIndex];
+  let d = audio.duration;
+  if (!d || d === Infinity) {
+    if (currentSong && currentSong.duration) d = currentSong.duration;
+  }
+
+  if (d > 0 && d !== Infinity) {
     const pct = (audio.currentTime / d) * 100;
     progressBarFill.style.width = `${pct}%`;
     miniProgress.style.width = `${pct}%`;
@@ -1007,7 +1070,18 @@ audio.addEventListener('timeupdate', () => {
     }
   }
 });
-audio.addEventListener('loadedmetadata', () => { durationTimeEl.innerText = formatTime(audio.duration); });
+audio.addEventListener('loadedmetadata', () => {
+  const currentSong = getCurrentSongs()[currentSongIndex];
+  let d = audio.duration;
+  if (!d || d === Infinity) {
+    if (currentSong && currentSong.duration) d = currentSong.duration;
+  }
+  if (d > 0 && d !== Infinity) {
+    durationTimeEl.innerText = formatTime(d);
+  } else {
+    durationTimeEl.innerText = "0:00";
+  }
+});
 audio.addEventListener('ended', playNext);
 
 // Cờ để ngăn error handler kích hoạt khi đang reload stream thủ công
