@@ -18,6 +18,7 @@ let appData = {
 let currentListIndex = 0;
 let currentSongIndex = 0;
 let isPlaying = false;
+let pauseTimestamp = 0;
 let qrGenerated = false;
 let canEdit = true;
 
@@ -865,11 +866,29 @@ function buildAlbumSongItem(s, context = 'album') {
 playPauseBtn.addEventListener('click', togglePlay);
 miniPlayPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePlay(); });
 
-function togglePlay() {
-  if (!audio.src) { selectSong(currentSongIndex); return; }
-  if (audio.paused) audio.play();
-  else audio.pause();
-}
+  function togglePlay() {
+    if (!audio.src) { selectSong(currentSongIndex); return; }
+    if (audio.paused) {
+      if (pauseTimestamp > 0 && Date.now() - pauseTimestamp > 120000) {
+        console.warn("[Resume] Paused for > 2 mins, auto-recovering stream...");
+        recoverAudioStream();
+        pauseTimestamp = 0;
+        return;
+      }
+      
+      // Khởi động watchdog ngay lập tức nếu stream bị kẹt (không lên tiếng)
+      consecutiveErrorCount = 0;
+      startStalledWatchdog();
+
+      audio.play().catch(e => {
+        console.warn("Play error/blocked:", e);
+        recoverAudioStream();
+      });
+      pauseTimestamp = 0;
+    } else {
+      audio.pause();
+    }
+  }
 
 // IPC listener for mini player commands
 if (window.electronAPI) {
@@ -937,11 +956,12 @@ audio.addEventListener('play', () => {
   updateUIPlayPause(); 
   sendPlayerState();
 });
-audio.addEventListener('pause', () => { 
-  isPlaying = false; 
-  updateUIPlayPause(); 
-  sendPlayerState();
-});
+  audio.addEventListener('pause', () => { 
+    pauseTimestamp = Date.now();
+    isPlaying = false; 
+    updateUIPlayPause(); 
+    sendPlayerState();
+  });
 
 audio.addEventListener('waiting', () => {
   const spinner = '<i class="ph ph-spinner ph-spin"></i>';

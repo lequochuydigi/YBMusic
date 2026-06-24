@@ -1,7 +1,7 @@
 {
   "name": "youtube-bg-player",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "YouTube Music Background Player",
   "author": "Antigravity",
   "main": "main.js",

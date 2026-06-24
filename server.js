@@ -80,10 +80,10 @@ function getAudioUrl(videoId) {
       const url = stdout.trim();
       if (!url) return reject(new Error('No URL returned by yt-dlp'));
       
-      // Cache the URL for 2 hours
+      // Cache the URL for 50 minutes (to avoid YouTube's 1-hour or 15-min dropping behavior on older URLs)
       urlCache.set(videoId, {
         url: url,
-        expires: Date.now() + 1000 * 60 * 60 * 2
+        expires: Date.now() + 1000 * 60 * 50
       });
       resolve(url);
     });
@@ -173,7 +173,8 @@ app.get('/api/stream', (req, res) => {
       const audioUrl = await getAudioUrl(videoId);
       
       const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Connection': 'keep-alive'
       };
       if (req.headers.range) headers['Range'] = req.headers.range;
 
@@ -230,6 +231,7 @@ app.get('/api/stream', (req, res) => {
         // Nếu stream bị abort giữa chừng (connection drop từ YouTube)
         proxyRes.on('aborted', () => {
           console.warn(`[Stream] YouTube aborted stream for ${videoId}`);
+          urlCache.delete(videoId); // Delete cached URL so next time it gets a fresh one
           if (!res.headersSent) res.status(503).send('Stream interrupted');
         });
       });

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'yt-bg-player-v1.6.5';
+const CACHE_NAME = 'yt-bg-player-v1.7.1';
 const ASSETS_TO_CACHE = [
-  '/?v=1.6.5',
-  '/index.html?v=1.6.5',
-  '/style.css?v=1.6.5',
-  '/app.js?v=1.6.5'
+  '/?v=1.7.1',
+  '/index.html?v=1.7.1',
+  '/style.css?v=1.7.1',
+  '/app.js?v=1.7.1'
 ];
 
 self.addEventListener('install', (event) => {
@@ -36,20 +36,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-First Strategy cho tất cả file tĩnh để đảm bảo F5 luôn tải code mới
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((response) => {
-      // Trả về cache nếu có, ngược lại gọi network
-      return response || fetch(event.request).then((fetchRes) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, fetchRes.clone());
-          return fetchRes;
-        });
+    fetch(event.request).then((networkResponse) => {
+      return caches.open(CACHE_NAME).then((cache) => {
+        cache.put(event.request, networkResponse.clone());
+        return networkResponse;
       });
     }).catch(() => {
-      // Trả về index.html nếu mất mạng
-      if (event.request.mode === 'navigate') {
-        return caches.match('/index.html', { ignoreSearch: true });
-      }
+      // Nếu mất mạng, fallback về Cache
+      return caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        // Fallback về index.html nếu request là navigate (load page)
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html', { ignoreSearch: true });
+        }
+      });
     })
   );
 });
